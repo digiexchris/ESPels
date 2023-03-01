@@ -6,3 +6,4 @@ void IRAM_ATTR processMotion(void);
 void start_rapid(double distance);
 //void calcDelta(void *pvParaeters);
 
+void init_pos_feed();

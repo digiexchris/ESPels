@@ -8,19 +8,22 @@
 #include <yasm.h>
 #include "rmtStepper.h"
 #include "gear.h"
+#include "Machine.h"
+#include "Encoder.h"
+#include "log.h"
+#include "state.h"
+#include "Stepper.h"
+#include "display.h"
+
+YASM btn_yasm;
 
 //Neotimer button_read_timer = Neotimer(10);
 Neotimer button_print_timer = Neotimer(2000);
 Neotimer dro_timer = Neotimer(600);
-Log::Msg el;
 
 
 uint8_t menu = 3; 
 int pitch_menu= 1;
-volatile bool feeding = false;
-volatile bool z_feeding_dir = true;
-
-
 
 
 #ifdef DEBUG_CPU_STATS
@@ -30,10 +33,6 @@ char stats[ 2048];
 #undef configUSE_STATS_FORMATTING_FUNCTIONS
 #define configUSE_STATS_FORMATTING_FUNCTIONS 1
 #endif
-
-YASM btn_yasm;
-
-
 enum class BtnState{
   Startup,
   Ready,
@@ -77,11 +76,6 @@ Bd bdata[NUM_BUTTONS] = {
     mbd
   };
 */ //  button gutting
-
-int32_t stepsPerMM = 0;
-int32_t relativePosition = 0;
-int32_t absolutePosition = 0;
-
 
 void init_controls(){
   btn_yasm.next(startupState);  
@@ -187,7 +181,11 @@ void slaveJogStatusState(){
 extern struct Gear::State gear;
 void setFactor(){
   
-  int den = lead_screw_pitch * spindle_encoder_resolution ;
+  //recommended refactor for a leadscrew or feed class, den = feed.GetEncoderStepsPerSpindleRotation();
+  //feed being initialized internally with the leadscrew pitch and encoder PPR
+  int den = lead_screw_pitch * spindle_encoder_resolution;
+
+  //recommended refactor using a stepper class: nom = stepper.GetStepsForDistance(Units::Metric, pitch);
   int nom = motor_steps * pitch;
 
   //

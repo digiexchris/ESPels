@@ -1,0 +1,20 @@
+suggestions
+
+split headers and initializsers into a precompiled header, and then the initializer in the .inl. the PCH can then avoid the huge chain of includes at the top of every file.
+
+For faster, easier, and safer extension and refactors later:
+- Slowly convert areas of concern into c++ constructs (classes, structs)
+- Have areas of concern ask other areas of concern to do things for them, instead of mutatin memory directly
+-- Web should call State via functions, not mutate State's memory.
+- Make some common constructs, which can be generic, which can be extended by specific use cases.
+-- Such as, the RMT stepper controls the hardware. That's good. Wrap it in a generic Stepper that extends RMTStepper that takes pin configuration, microstepping, steps per rev etc. at instantiation time
+-- Leadscrew can either extend Stepper, or have a stepper object in it. I'd prefer Leadscrew to have a MovementDevice which would be an abstract class that is overridden by Stepper. So Leadscrew can instantiate a Stepper, which because of the MovementDevice abstraction, has the same API regardless of wether it's actually a leadscrew, or turning the carriage handle on a rack and pinion, or some other kind of control. Leadscrew can contain things like SAE or Metric, how to convert between the leadscrew system and the stepper coordinate system (sae or metric), and can give instructions to the stepper in distance or steps.
+-- Machine can have a leadscrew (or more leadscrews, in the case of mill feeding or cross slide feeding or something), and can ask the leadscrew to move a distance in the current coordinate system eg. With a metric leadscrew, and the machine in SAE mode, Machine's Move() can contain myLeadscrewInstance.Move(this.coordinatesystem, "0.001f"); and then the stepper will convert coordinate systems to the stepper system, and then tell the stepper to move a certain number of millimeters. Or steps, alternately. Then Stepper calls rmtStepper functions to do the work.
+--- this way if there are two leadscrews available (or, is more common, a lathe that has a 127 tooth metric/SAE conversion gear) that is selectable in a gearboax or something easy to use, you can gain more accuracy and less error, just by setting up the Leadscrew object with the same values, just a different coordinate system and a different ratio and it can figure it out.
+--- It also allows for easily writing a different kind of motor driver, under the MovementDevice contract. Hobby servos, whatever the end user fancies. Or, like we're discussing, replacing the stepper acceleration algorithms. The same api means we can have both in the code and A/B test or even allow the user to select one at config time.
+--- Maybe most importantly, it makes clear distinctions on areas of code and how memory is laid out, which is beneficial to getting more people to contribute. Easier to understand at a glance, easier to unit test in isolation, and easier to submit changes to small chunks of code for small improvements instead of needing a large effort to refactor
+--- Web can ask for state from Machine or something, and have Machine return it in a way that doesn't require Web to know about the internal state of machine. 
+---- This means Web can be changed out for another library or stack without a person working on that having to know how Machine works, they just need to know what gets returned from the function which they can infer from the return type (make a custom type for what gets returned). The same data can be returned in the same format to other types of displays perhaps.
+-- Provides important improvements for thread safety
+
+- Display can be another abstract that Web implements. Then if we add more display types (buttons, lcd, nextion, an off-board ESP with whatever the user writes, whatever) it can plug into the same code in the same place without additional effort.

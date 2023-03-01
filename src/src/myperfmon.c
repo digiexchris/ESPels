@@ -12,12 +12,13 @@
 #include "esp_sleep.h"
 //#include "perfmon.h"
 
-static const char *TAG = "perfmon";
-
-static uint64_t idle0Calls = 0;
-static uint64_t idle1Calls = 0;
 int8_t cpu0 = 0;
 int8_t cpu1 = 1;
+
+static const char *TAG = "perfmon";
+
+static uint64_t idle0Calls;
+static uint64_t idle1Calls;
 
 #if defined(CONFIG_ESP32_DEFAULT_CPU_FREQ_240)
 static const uint64_t MaxIdleCalls = 1855000;
